@@ -230,6 +230,23 @@
 </div>
 
 <script>
+  // Локальное хранилище на устройстве (работает на реальном сайте/APK;
+  // в превью Claude вместо этого используется песочница window.storage).
+  const storage = {
+    async get(key){
+      try{
+        const v = localStorage.getItem(key);
+        return v === null ? null : { key, value: v };
+      } catch(e){ return null; }
+    },
+    async set(key, value){
+      try{
+        localStorage.setItem(key, value);
+        return { key, value };
+      } catch(e){ throw e; }
+    }
+  };
+
   let settings = { baseThreshold: 4, enhancedThreshold: 5, baseAmount: null, enhancedAmount: null };
   let configured = false;
   let grades = [];
@@ -247,7 +264,7 @@
   // ---------- Storage ----------
   async function loadSettings(){
     try{
-      const res = await window.storage.get('stipendiya_settings', false);
+      const res = await storage.get('stipendiya_settings');
       if(res && res.value){
         settings = JSON.parse(res.value);
         configured = true;
@@ -265,7 +282,7 @@
 
   async function saveSettingsToStorage(){
     try{
-      await window.storage.set('stipendiya_settings', JSON.stringify(settings), false);
+      await storage.set('stipendiya_settings', JSON.stringify(settings));
     } catch(e){ console.error('Storage error', e); }
   }
 
