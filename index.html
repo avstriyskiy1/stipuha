@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Стипуха — калькулятор стипендии</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#C0392B">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=PT+Serif:wght@400;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FAFAF7;
+    --card:#FFFFFF;
+    --ink:#1B2430;
+    --ink-soft:#5B6472;
+    --muted:#9AA1AB;
+    --red:#C0392B;
+    --red-dim:#C0392B1a;
+    --grid:#E7E9ED;
+    --green:#3F7D5C;
+    --green-dim:#3F7D5C1a;
+    --radius:7px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size:26px 26px;
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    padding:28px 16px 60px;
+  }
+  .app{ width:100%; max-width:460px; }
+
+  .app-header{ margin-bottom:22px; padding-left:2px; display:flex; justify-content:space-between; align-items:flex-start; }
+  .app-header h1{
+    font-family:'PT Serif',serif; font-weight:700; font-size:2.35rem; margin:0;
+    letter-spacing:-0.01em; position:relative; display:inline-block;
+  }
+  .app-header h1::after{
+    content:""; position:absolute; left:2px; right:2px; bottom:2px; height:9px;
+    background:var(--red-dim); z-index:-1; transform:skewX(-6deg);
+  }
+  .app-header .tagline{ margin:6px 0 0; color:var(--ink-soft); font-size:0.92rem; }
+
+  .settings-btn{
+    width:38px; height:38px; border-radius:50%;
+    border:1.5px solid var(--grid); background:var(--card);
+    color:var(--ink-soft); font-size:1.05rem; cursor:pointer; flex-shrink:0; margin-top:4px;
+  }
+  .settings-btn:hover{ border-color:var(--red); color:var(--red); }
+
+  .card{ background:var(--card); border:1px solid var(--grid); border-radius:var(--radius); padding:26px 22px 24px; }
+
+  .view{ display:none; }
+  .view.active{ display:block; }
+
+  .panel-title{ font-family:'PT Serif',serif; font-size:1.3rem; font-weight:700; margin:0 0 4px; }
+  .panel-sub{ color:var(--ink-soft); font-size:0.88rem; line-height:1.4; margin:0 0 20px; }
+
+  .field-label{ font-size:0.78rem; font-weight:600; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin-bottom:8px; display:block; }
+
+  .grade-buttons{ display:flex; gap:8px; margin-bottom:16px; }
+  .grade-btn{
+    flex:1; height:56px; border:1.5px solid var(--grid); background:var(--paper);
+    border-radius:var(--radius); font-family:'JetBrains Mono',monospace; font-weight:700;
+    font-size:1.2rem; color:var(--ink); cursor:pointer; transition:border-color .15s ease, transform .1s ease;
+  }
+  .grade-btn:hover{ border-color:var(--red); color:var(--red); }
+  .grade-btn:active{ transform:scale(0.94); }
+
+  .chips{ display:flex; flex-wrap:wrap; gap:8px; min-height:38px; margin-bottom:6px; align-items:flex-start; }
+  .chip{
+    display:inline-flex; align-items:center; gap:6px; background:var(--paper);
+    border:1px solid var(--grid); border-radius:20px; padding:5px 8px 5px 12px;
+    font-family:'JetBrains Mono',monospace; font-weight:600; font-size:0.9rem;
+  }
+  .chip button{ border:none; background:transparent; color:var(--muted); cursor:pointer; font-size:1rem; line-height:1; padding:2px; }
+  .chip button:hover{ color:var(--red); }
+  .chips-empty{ color:var(--muted); font-size:0.85rem; font-style:italic; padding:8px 2px; }
+
+  .result-wrap{ display:flex; justify-content:center; padding:22px 0 6px; }
+  .result-mark{ position:relative; width:172px; height:172px; display:flex; align-items:center; justify-content:center; }
+  .result-mark svg{ position:absolute; top:0; left:0; width:100%; height:100%; }
+  .circle-path{
+    fill:none; stroke:var(--red); stroke-width:3.5; stroke-linecap:round;
+    stroke-dasharray:220; stroke-dashoffset:220; transition:stroke-dashoffset .7s cubic-bezier(.4,0,.2,1);
+  }
+  .circle-path.drawn{ stroke-dashoffset:0; }
+  .circle-path.ok{ stroke:var(--green); }
+
+  .result-center{ position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; text-align:center; padding:0 14px; }
+  .result-status{ font-size:0.76rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--red); margin-bottom:6px; }
+  .result-status.ok{ color:var(--green); }
+  .result-amount{ font-family:'JetBrains Mono',monospace; font-weight:700; font-size:1.7rem; color:var(--ink); line-height:1.1; }
+
+  .result-note{ text-align:center; color:var(--ink-soft); font-size:0.9rem; line-height:1.45; padding:14px 6px 0; min-height:20px; }
+
+  .settings-rows{ margin-bottom:6px; }
+  .setting-block{ margin-bottom:22px; }
+  .target-buttons{ display:flex; gap:8px; }
+  .target-btn{
+    flex:1; padding:10px 4px; border:1.5px solid var(--grid); border-radius:var(--radius);
+    background:var(--paper); font-family:'JetBrains Mono',monospace; font-weight:700; font-size:1.05rem;
+    color:var(--ink); cursor:pointer;
+  }
+  .target-btn:hover{ border-color:var(--red); color:var(--red); }
+  .target-btn.selected{ border-color:var(--red); color:var(--red); background:var(--red-dim); }
+
+  .amount-input-wrap{ position:relative; }
+  .amount-input-wrap input[type="number"]{
+    width:100%; font-family:'JetBrains Mono',monospace; font-size:1rem; padding:11px 34px 11px 12px;
+    border:1.5px solid var(--grid); border-radius:var(--radius); background:var(--paper); color:var(--ink);
+  }
+  .amount-input-wrap input[type="number"]:focus{ outline:none; border-color:var(--red); }
+  .amount-input-wrap .suffix{
+    position:absolute; right:12px; top:50%; transform:translateY(-50%);
+    color:var(--muted); font-family:'JetBrains Mono',monospace; font-size:0.95rem; pointer-events:none;
+  }
+
+  .hint-text{ color:var(--muted); font-size:0.8rem; margin-top:8px; line-height:1.4; }
+
+  .save-btn{
+    width:100%; padding:13px; background:var(--ink); color:var(--paper); border:none;
+    border-radius:var(--radius); font-weight:600; font-size:0.95rem; cursor:pointer; transition:background .15s ease;
+  }
+  .save-btn:hover{ background:var(--red); }
+
+  .link-btn{ display:block; width:100%; text-align:center; background:none; border:none; color:var(--muted);
+    font-size:0.82rem; margin-top:14px; cursor:pointer; text-decoration:underline; }
+  .link-btn:hover{ color:var(--red); }
+
+  .loading-note{ text-align:center; color:var(--muted); font-size:0.88rem; padding:40px 10px; }
+  footer{ text-align:center; color:var(--muted); font-size:0.76rem; margin-top:20px; padding:0 12px; line-height:1.5; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div class="app-header">
+    <div>
+      <h1>Стипуха</h1>
+      <p class="tagline">калькулятор стипендии по сессии</p>
+    </div>
+    <button class="settings-btn" id="open-settings" title="Настроить пороги и суммы">⚙</button>
+  </div>
+
+  <div class="card">
+
+    <div class="view active" id="view-loading">
+      <p class="loading-note">Загружаем настройки…</p>
+    </div>
+
+    <!-- MAIN VIEW -->
+    <div class="view" id="view-main">
+      <h2 class="panel-title">Оценки за сессию</h2>
+      <p class="panel-sub">Добавь все экзаменационные оценки — сразу увидишь, положена ли стипендия.</p>
+
+      <span class="field-label">Добавить оценку</span>
+      <div class="grade-buttons" id="grade-buttons"></div>
+
+      <span class="field-label">Оценки</span>
+      <div class="chips" id="chips"></div>
+
+      <div class="result-wrap">
+        <div class="result-mark">
+          <svg viewBox="0 0 172 172">
+            <path class="circle-path" id="result-circle" pathLength="220"
+              d="M86,12 C124,11,157,37,156,84 C155,131,127,159,85,158 C43,157,15,129,16,84 C17,39,48,13,86,12 Z"/>
+          </svg>
+          <div class="result-center">
+            <span class="result-status" id="result-status">—</span>
+            <span class="result-amount" id="result-amount">—</span>
+          </div>
+        </div>
+      </div>
+      <p class="result-note" id="result-note"></p>
+    </div>
+
+    <!-- SETTINGS VIEW -->
+    <div class="view" id="view-settings">
+      <h2 class="panel-title">Пороги и суммы</h2>
+      <p class="panel-sub">В каждом вузе свои правила — настрой так, как у тебя.</p>
+
+      <div class="setting-block">
+        <span class="field-label">Минимальная оценка для стипендии</span>
+        <div class="target-buttons" id="base-threshold-buttons"></div>
+      </div>
+
+      <div class="setting-block">
+        <span class="field-label">Минимальная оценка для повышенной</span>
+        <div class="target-buttons" id="enhanced-threshold-buttons"></div>
+      </div>
+
+      <div class="setting-block">
+        <span class="field-label">Сумма обычной стипендии</span>
+        <div class="amount-input-wrap">
+          <input type="number" id="base-amount" placeholder="0" min="0" step="1">
+          <span class="suffix">₽</span>
+        </div>
+      </div>
+
+      <div class="setting-block">
+        <span class="field-label">Сумма повышенной стипендии</span>
+        <div class="amount-input-wrap">
+          <input type="number" id="enhanced-amount" placeholder="0" min="0" step="1">
+          <span class="suffix">₽</span>
+        </div>
+        <p class="hint-text">Суммы можно оставить пустыми — тогда приложение покажет только статус, без рублей.</p>
+      </div>
+
+      <button class="save-btn" id="save-settings-btn">Сохранить</button>
+      <button class="link-btn" id="cancel-settings-btn">Отмена</button>
+    </div>
+
+  </div>
+
+  <footer>Правила у каждого вуза свои — уточни точные условия в деканате. Настройки хранятся только на этом устройстве.</footer>
+</div>
+
+<script>
+  let settings = { baseThreshold: 4, enhancedThreshold: 5, baseAmount: null, enhancedAmount: null };
+  let configured = false;
+  let grades = [];
+
+  const views = {
+    loading: document.getElementById('view-loading'),
+    main: document.getElementById('view-main'),
+    settings: document.getElementById('view-settings'),
+  };
+  function showView(name){
+    Object.values(views).forEach(v=>v.classList.remove('active'));
+    views[name].classList.add('active');
+  }
+
+  // ---------- Storage ----------
+  async function loadSettings(){
+    try{
+      const res = await window.storage.get('stipendiya_settings', false);
+      if(res && res.value){
+        settings = JSON.parse(res.value);
+        configured = true;
+      }
+    } catch(e){ configured = false; }
+
+    if(!configured){
+      openSettings();
+    } else {
+      showView('main');
+      renderGradeButtons();
+      renderResult();
+    }
+  }
+
+  async function saveSettingsToStorage(){
+    try{
+      await window.storage.set('stipendiya_settings', JSON.stringify(settings), false);
+    } catch(e){ console.error('Storage error', e); }
+  }
+
+  // ---------- Settings view ----------
+  function openSettings(){
+    renderThresholdButtons('base-threshold-buttons', settings.baseThreshold, (v)=>{ settings.baseThreshold = v; });
+    renderThresholdButtons('enhanced-threshold-buttons', settings.enhancedThreshold, (v)=>{ settings.enhancedThreshold = v; });
+    document.getElementById('base-amount').value = settings.baseAmount ?? '';
+    document.getElementById('enhanced-amount').value = settings.enhancedAmount ?? '';
+    document.getElementById('cancel-settings-btn').style.display = configured ? 'block' : 'none';
+    showView('settings');
+  }
+
+  function renderThresholdButtons(wrapId, selected, onSelect){
+    const wrap = document.getElementById(wrapId);
+    wrap.innerHTML = '';
+    [3,4,5].forEach(v=>{
+      const btn = document.createElement('button');
+      btn.className = 'target-btn' + (v===selected ? ' selected':'');
+      btn.textContent = v;
+      btn.addEventListener('click', ()=>{
+        onSelect(v);
+        wrap.querySelectorAll('.target-btn').forEach(b=>b.classList.remove('selected'));
+        btn.classList.add('selected');
+      });
+      wrap.appendChild(btn);
+    });
+  }
+
+  document.getElementById('open-settings').addEventListener('click', openSettings);
+
+  document.getElementById('cancel-settings-btn').addEventListener('click', ()=>{
+    showView('main');
+  });
+
+  document.getElementById('save-settings-btn').addEventListener('click', async ()=>{
+    if(settings.enhancedThreshold < settings.baseThreshold){
+      alert('Порог для повышенной стипендии не может быть ниже порога обычной.');
+      return;
+    }
+    const baseVal = document.getElementById('base-amount').value;
+    const enhVal = document.getElementById('enhanced-amount').value;
+    settings.baseAmount = baseVal === '' ? null : Number(baseVal);
+    settings.enhancedAmount = enhVal === '' ? null : Number(enhVal);
+    configured = true;
+    await saveSettingsToStorage();
+    showView('main');
+    renderGradeButtons();
+    renderResult();
+  });
+
+  // ---------- Main view ----------
+  function renderGradeButtons(){
+    const wrap = document.getElementById('grade-buttons');
+    wrap.innerHTML = '';
+    [2,3,4,5].forEach(g=>{
+      const btn = document.createElement('button');
+      btn.className = 'grade-btn';
+      btn.textContent = g;
+      btn.addEventListener('click', ()=>{ grades.push(g); renderResult(); });
+      wrap.appendChild(btn);
+    });
+  }
+
+  function markCircle(){
+    const el = document.getElementById('result-circle');
+    el.classList.remove('drawn');
+    void el.offsetWidth;
+    el.classList.add('drawn');
+  }
+
+  function fmtMoney(n){
+    return n.toLocaleString('ru-RU');
+  }
+
+  function renderResult(){
+    const chipsWrap = document.getElementById('chips');
+    chipsWrap.innerHTML = '';
+    if(grades.length === 0){
+      chipsWrap.innerHTML = '<span class="chips-empty">Пока пусто — нажми на цифру выше</span>';
+    } else {
+      grades.forEach((g,i)=>{
+        const chip = document.createElement('span');
+        chip.className = 'chip';
+        chip.innerHTML = g + ' <button aria-label="Удалить">✕</button>';
+        chip.querySelector('button').addEventListener('click', ()=>{
+          grades.splice(i,1);
+          renderResult();
+        });
+        chipsWrap.appendChild(chip);
+      });
+    }
+
+    const statusEl = document.getElementById('result-status');
+    const amountEl = document.getElementById('result-amount');
+    const noteEl = document.getElementById('result-note');
+    const circleEl = document.getElementById('result-circle');
+
+    if(grades.length === 0){
+      statusEl.textContent = '—';
+      statusEl.className = 'result-status';
+      amountEl.textContent = '—';
+      noteEl.textContent = '';
+      circleEl.classList.remove('ok');
+      return;
+    }
+
+    const minGrade = Math.min(...grades);
+    const notQualified = minGrade < settings.baseThreshold;
+    const enhanced = minGrade >= settings.enhancedThreshold;
+
+    if(notQualified){
+      statusEl.textContent = 'Не положена';
+      statusEl.className = 'result-status';
+      circleEl.classList.remove('ok');
+      amountEl.textContent = '0 ₽';
+      noteEl.textContent = 'Есть оценка ниже порога (нужно не меньше ' + settings.baseThreshold + ') — минимальная у тебя ' + minGrade + '.';
+    } else if(enhanced){
+      statusEl.textContent = 'Повышенная';
+      statusEl.className = 'result-status ok';
+      circleEl.classList.add('ok');
+      amountEl.textContent = settings.enhancedAmount != null ? fmtMoney(settings.enhancedAmount) + ' ₽' : 'Есть';
+      noteEl.textContent = 'Все оценки не ниже ' + settings.enhancedThreshold + ' — можно претендовать на повышенную стипендию.';
+    } else {
+      statusEl.textContent = 'Положена';
+      statusEl.className = 'result-status ok';
+      circleEl.classList.add('ok');
+      amountEl.textContent = settings.baseAmount != null ? fmtMoney(settings.baseAmount) + ' ₽' : 'Есть';
+      noteEl.textContent = 'Минимальная оценка ' + minGrade + ' — порог в ' + settings.baseThreshold + ' пройден.';
+    }
+    markCircle();
+  }
+
+  loadSettings();
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', ()=>{
+      navigator.serviceWorker.register('sw.js').catch(()=>{});
+    });
+  }
+</script>
+
+</body>
+</html>
